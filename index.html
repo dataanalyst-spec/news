@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lead Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f3f5f9;--c:#fff;--t:#16213a;--m:#6a7389;--b:#e4e8f0;--navy:#0f2747;--off:#2563eb;--dig:#7c3aed;--ok:#059669}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 "Segoe UI",Inter,system-ui,sans-serif;background:var(--bg);color:var(--t)}
+header{background:linear-gradient(120deg,#0f2747,#1d3f72);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+h1{margin:0;font-size:21px;letter-spacing:.2px}header small{opacity:.75;display:block;font-size:12px;margin-top:2px}
+.pill{background:rgba(255,255,255,.14);padding:6px 12px;border-radius:20px;font-size:12px;display:flex;gap:8px;align-items:center}
+.pill button{background:#fff;color:var(--navy);border:0;border-radius:12px;padding:3px 10px;cursor:pointer;font-weight:600}
+main{padding:20px 28px;max-width:1560px;margin:auto}
+.tabs{display:flex;gap:6px;background:#e4e8f0;padding:5px;border-radius:12px;width:fit-content;margin-bottom:16px;flex-wrap:wrap}
+.tabs button{padding:9px 20px;border:0;background:transparent;border-radius:9px;cursor:pointer;font-weight:600;color:var(--m);font-size:14px}
+.tabs button.on{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.card{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:18px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,39,71,.05)}
+.card h2{font-size:16px;margin:0 0 3px;display:flex;align-items:center;gap:10px;color:var(--navy)}
+.card h2 i{font-style:normal;background:var(--navy);color:#fff;width:24px;height:24px;border-radius:7px;display:inline-grid;place-items:center;font-size:12px}
+.sub{color:var(--m);font-size:12.5px;margin:0 0 12px 34px}
+.filters{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+label{font-size:11px;color:var(--m);text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:flex;flex-direction:column;gap:4px}
+select{padding:8px 10px;border:1px solid var(--b);border-radius:8px;font-size:13px;min-width:130px;background:#fff;color:var(--t)}
+.btn{padding:9px 16px;border:1px solid var(--b);background:#fff;border-radius:8px;cursor:pointer;font-weight:600;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--b);border-left:4px solid var(--a,#2563eb);border-radius:12px;padding:14px 16px}
+.kpi span{font-size:11px;color:var(--m);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.kpi b{display:block;font-size:28px;color:var(--navy);margin-top:2px}.kpi em{font-style:normal;font-size:12px;color:var(--m)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.bar{display:grid;grid-template-columns:150px 1fr 90px;gap:10px;align-items:center;margin:7px 0;font-size:13px}
+.bar div.l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .tr{background:#eef1f7;border-radius:6px;height:12px;overflow:hidden}.bar .tr i{display:block;height:100%;border-radius:6px;background:var(--col,#2563eb)}
+.bar .v{text-align:right;color:var(--m)}.bar .v b{color:var(--t)}
+.sc{overflow-x:auto;border:1px solid var(--b);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{background:var(--navy);color:#fff;font-weight:600;font-size:12px;padding:10px 12px;text-align:center;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid #edf0f6;text-align:center;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;z-index:1}td:first-child{background:#fff;font-weight:600}
+tr:hover td{background:#f7f9fd}tr:hover td:first-child{background:#f7f9fd}
+td.tt,th.tt{background:#eef2fa;font-weight:700;color:var(--navy)}th.tt{background:#1d3f72;color:#fff}
+tr.tot td{background:#eef2fa;font-weight:700;color:var(--navy);border-top:2px solid var(--navy)}
+.msg{font-size:12.5px;color:var(--m);padding:10px 0}.err{color:#b91c1c}
+.ins{background:#eff6ff;border:1px solid #cfe0ff;border-radius:10px;padding:12px 16px;margin-bottom:18px;color:#1e3a8a;font-size:13.5px}
+details{margin-top:10px}summary{cursor:pointer;color:var(--m);font-size:12px}
+@media print{.filters,.tabs,.pill,details{display:none}body{background:#fff}}
+</style></head><body>
+<header><div><h1>Lead Performance Dashboard</h1><small>Offline &amp; Digital lead management report</small></div>
+<div class="pill"><span id="status">Connecting…</span><button onclick="load()">Refresh</button><button onclick="window.print()">Print</button></div></header>
+<main>
+<div class="tabs" id="tabs"><button data-t="btl" class="on">Offline Leads</button><button data-t="nik">Digital Leads</button><button data-t="all">Final Report · Offline + Digital</button></div>
+<div class="card"><div class="filters">
+<label>Period<select id="q"><option value="">All time</option><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="thisweek">This week</option><option value="lastweek">Last week</option><option value="thismonth">Current month</option></select></label>
+<label>Date<select id="fd"></select></label><label>Week<select id="fw"></select></label>
+<label>Month<select id="fm"></select></label><label>Year<select id="fy"></select></label>
+<label>Lead owner<select id="fo"></select></label>
+<button class="btn" onclick="resetF()">Reset filters</button></div>
+<div class="msg" style="padding-bottom:0">Date filters use the User Registration date.</div>
+<details><summary>Column settings &amp; stage names</summary><div class="filters" id="map" style="margin-top:10px"></div></details></div>
+<div id="out"></div></main>
+<script>
+const KEY="2PACX-1vToiYHVT7kgStYbZgL2G-5jlDgjfP_DnhC3OBArYEWNhLU8Ohp5qH9C1L9-yl-WEH2cuqheZ3kzqjYy";
+const BASE="https://docs.google.com/spreadsheets/d/e/"+KEY+"/pub";
+const NAMES={btl:"Offline Leads",nik:"Digital Leads"},COL={btl:"#2563eb",nik:"#7c3aed",all:"#0f2747"};
+const raw={btl:{h:[],r:[]},nik:{h:[],r:[]}},map={btl:{},nik:{}};let tab="btl",loaded=false;
+const $=i=>document.getElementById(i),pad=n=>String(n).padStart(2,"0");
+const dk=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()),mk=d=>d.getFullYear()+"-"+pad(d.getMonth()+1);
+const mon=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x},wk=d=>dk(mon(d));
+const MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const mlab=k=>MN[+k.slice(5)-1]+" "+k.slice(0,4);
+const wlab=k=>{const s=new Date(k+"T00:00"),e=new Date(s);e.setDate(e.getDate()+6);const f=d=>d.getDate()+" "+MN[d.getMonth()];return f(s)+" – "+f(e)};
+const dlab=k=>{const d=new Date(k+"T00:00");return d.getDate()+" "+MN[d.getMonth()]+" "+d.getFullYear()};
+function parseCSV(t){const R=[];let r=[],c="",q=false;for(let i=0;i<t.length;i++){const ch=t[i];
+if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==","){r.push(c);c=""}
+else if(ch=="\n"||ch=="\r"){if(ch=="\r"&&t[i+1]=="\n")i++;r.push(c);c="";R.push(r);r=[]}else c+=ch}
+if(c||r.length){r.push(c);R.push(r)}return R}
+function pDate(v){if(v==null||v==="")return null;if(v instanceof Date)return isNaN(v)?null:v;
+if(typeof v==="number"){const u=new Date(Math.round((v-25569)*864e5));return new Date(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate())}
+const s=String(v).trim();let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);
+m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+const d=new Date(s);return isNaN(d)?null:d}
+const clean=v=>{const s=String(v??"").trim();return /^(na|n\/a|nan|null|none|nil|-|--)$/i.test(s)?"":s};
+
+function setData(k,rows){rows=rows.filter(r=>r.some(v=>String(v).trim()!==""));let hi=0,best=0;
+rows.slice(0,10).forEach((r,i)=>{const n=r.filter(v=>String(v).trim()!=="").length;if(n>best){best=n;hi=i}});
+raw[k].h=(rows[hi]||[]).map(x=>String(x).trim());raw[k].r=rows.slice(hi+1);autoMap(k)}
+function autoMap(k){const h=raw[k].h,f=re=>h.findIndex(x=>re.test(x));const u=f(/sub.?stage|sub.?status|sub.?stg/i);
+const numFrac=i=>{const v=raw[k].r.slice(0,300).map(r=>String(r[i]??"").trim()).filter(x=>x&&!/^na$/i.test(x));return v.length?v.filter(x=>/^\d+(\.\d+)?$/.test(x)).length/v.length:1};
+const cand=h.map((x,i)=>i).filter(i=>/stage|status/i.test(h[i])&&i!==u).sort((a,b)=>numFrac(a)-numFrac(b)||(/stage/i.test(h[b])-/stage/i.test(h[a])));
+const s=cand.length?cand[0]:-1;
+let d=f(/regist/i);if(d<0)d=f(/creat|date/i);let o=f(/lead.*owner|owner|assign|rm|executive/i);
+map[k]={o,s,u,d}}
+let LBL={};try{LBL=JSON.parse(localStorage.getItem("stageLbl")||"{}")}catch(e){}
+function setLbl(v,t){LBL[v]=t.trim();try{localStorage.setItem("stageLbl",JSON.stringify(LBL))}catch(e){}render()}
+function lblBox(){const set=new Set();["btl","nik"].forEach(k=>{if(map[k].s>=0)raw[k].r.forEach(r=>{const v=clean(r[map[k].s]);if(v)set.add(v)})});
+const vals=[...set];if(!vals.length||!vals.every(v=>/^\d+(\.\d+)?$/.test(v)))return"";
+return vals.sort((a,b)=>a-b).map(v=>`<label>Stage ${v} name<input style="padding:8px;border:1px solid #e4e8f0;border-radius:8px" value="${LBL[v]||""}" placeholder="e.g. New" onchange="setLbl('${v}',this.value)"></label>`).join("")}
+function buildMap(){let h="";for(const k of["btl","nik"]){const hs=raw[k].h;if(!hs.length)continue;
+for(const[f,l]of[["o","Lead owner"],["s","Lead stage"],["u","Lead substage"],["d","Registration date"]])
+h+=`<label>${NAMES[k]} · ${l}<select onchange="map['${k}'].${f}=+this.value;render()"><option value="-1">— none —</option>${hs.map((x,i)=>`<option value="${i}" ${map[k][f]==i?"selected":""}>${x||"(col "+(i+1)+")"}</option>`).join("")}</select></label>`}
+$("map").innerHTML=h+lblBox();const lb=lblBox();if(lb)document.querySelector("details").open=true}
+
+async function fromXlsx(){const r=await fetch(BASE+"?output=xlsx");if(!r.ok)throw 0;
+const wb=XLSX.read(await r.arrayBuffer(),{type:"array"});const N=wb.SheetNames;
+const pick=(re,fb)=>wb.Sheets[N.find(n=>re.test(n))||N[fb]];
+const g=ws=>XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+setData("btl",g(pick(/btl/i,0)));setData("nik",g(pick(/nikhil/i,1)))}
+async function fromCsv(){const h=await(await fetch(BASE+"html")).text();
+const m=[...h.matchAll(/name:\s*"([^"]+)"[^}]*?gid:\s*"(\d+)"/g)];if(!m.length)throw 0;
+const gid=re=>(m.find(x=>re.test(x[1]))||[])[2];
+const get=async g=>parseCSV(await(await fetch(BASE+"?output=csv&gid="+g)).text());
+setData("btl",await get(gid(/btl/i)??m[0][2]));setData("nik",await get(gid(/nikhil/i)??m[1][2]))}
+async function load(){const st=$("status");st.className="";st.textContent="Syncing data…";
+try{try{await fromXlsx()}catch(e){await fromCsv()}loaded=true;
+st.textContent=`● Live · ${raw.btl.r.length} offline · ${raw.nik.r.length} digital · ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`;buildMap();render()}
+catch(e){st.textContent="Could not reach the sheet. Check it is published to the web, then Refresh."}}
+
+function recs(k){const m=map[k],g=(r,i)=>i>=0?r[i]:"";return raw[k].r.map(r=>({o:clean(g(r,m.o)).replace(/\s*\([^)]*@[^)]*\)/,"")||"Unassigned",s:(x=>LBL[x]||x)(clean(g(r,m.s)))||"Not Updated",u:clean(g(r,m.u)),d:pDate(g(r,m.d)),src:k}))}
+const base=()=>tab=="all"?recs("btl").concat(recs("nik")):recs(tab);
+function fill(id,vals,lab){const el=$(id),cur=el.value;el.innerHTML='<option value="">All</option>'+vals.map(v=>`<option value="${v}">${lab?lab(v):v}</option>`).join("");if(vals.includes(cur))el.value=cur}
+const uniq=a=>[...new Set(a)].sort((x,y)=>x.localeCompare(y));
+function resetF(){["q","fd","fw","fm","fy","fo"].forEach(i=>$(i).value="");render()}
+function filt(a){const q=$("q").value,n=new Date(),td=dk(n),yd=dk(new Date(n.getFullYear(),n.getMonth(),n.getDate()-1)),tw=wk(n),lw=wk(new Date(mon(n).getTime()-7*864e5)),tm=mk(n),v=i=>$(i).value;
+return a.filter(x=>{if(v("fo")&&x.o!=v("fo"))return false;const d=x.d;
+if(q||v("fd")||v("fw")||v("fm")||v("fy")){if(!d)return false;
+if(q=="today"&&dk(d)!=td||q=="yesterday"&&dk(d)!=yd||q=="thisweek"&&wk(d)!=tw||q=="lastweek"&&wk(d)!=lw||q=="thismonth"&&mk(d)!=tm)return false;
+if(v("fd")&&dk(d)!=v("fd")||v("fw")&&wk(d)!=v("fw")||v("fm")&&mk(d)!=v("fm")||v("fy")&&String(d.getFullYear())!=v("fy"))return false}return true})}
+
+function pivot(a,rowF,colF,cols,colLab,title,sortCols){const rows=[...new Set(a.map(rowF))];
+if(!rows.length||!cols.length)return"<div class='msg'>No data for the selected filters.</div>";
+const M={};a.forEach(x=>{const c=colF(x);if(c==null)return;const r=rowF(x);(M[r]??={})[c]=(M[r][c]||0)+1});
+const T=r=>cols.reduce((s,c)=>s+((M[r]||{})[c]||0),0);rows.sort((x,y)=>T(y)-T(x));
+let mx=1;rows.forEach(r=>cols.forEach(c=>mx=Math.max(mx,(M[r]||{})[c]||0)));
+const ct={};let g=0,h=`<div class="sc"><table><tr><th>${title}</th>${cols.map(c=>`<th>${colLab?colLab(c):c}</th>`).join("")}<th class="tt">Total</th></tr>`;
+rows.forEach(r=>{h+=`<tr><td>${r}</td>`+cols.map(c=>{const n=(M[r]||{})[c]||0;ct[c]=(ct[c]||0)+n;return`<td style="${n?`background:rgba(37,99,235,${(.08+.4*n/mx).toFixed(2)})`:"color:#b6bccb"}">${n||"–"}</td>`}).join("")+`<td class="tt">${T(r)}</td></tr>`;g+=T(r)});
+return h+`<tr class="tot"><td>Grand total</td>${cols.map(c=>`<td>${ct[c]||0}</td>`).join("")}<td>${g}</td></tr></table></div>`}
+
+function periods(a,pred,withRate,allRef){const n=new Date(),tw=wk(n),tm=mk(n),A=a.filter(pred),R=a;
+const set=[x=>x.d&&wk(x.d)==tw,x=>x.d&&mk(x.d)==tm,()=>true];const rows=uniq(A.map(x=>x.o));
+if(!rows.length)return"<div class='msg'>No data.</div>";
+const tot=[0,0,0];let h=`<div class="sc"><table><tr><th>Lead owner</th><th>This week</th><th>This month</th><th class="tt">Till now</th><th>Share %</th>${withRate?"<th>Visit rate %</th>":""}</tr>`;
+const all=A.length;rows.sort((x,y)=>A.filter(p=>p.o==y).length-A.filter(p=>p.o==x).length);
+rows.forEach(r=>{const v=set.map(s=>A.filter(x=>x.o==r&&s(x)).length);v.forEach((c,i)=>tot[i]+=c);
+const lt=R.filter(x=>x.o==r).length;
+h+=`<tr><td>${r}</td><td>${v[0]||"–"}</td><td>${v[1]||"–"}</td><td class="tt">${v[2]}</td><td>${(v[2]/all*100).toFixed(1)}%</td>${withRate?`<td>${lt?(v[2]/lt*100).toFixed(1):"0.0"}%</td>`:""}</tr>`});
+return h+`<tr class="tot"><td>Grand total</td><td>${tot[0]}</td><td>${tot[1]}</td><td>${tot[2]}</td><td>100%</td>${withRate?`<td>${R.length?(tot[2]/R.length*100).toFixed(1):"0.0"}%</td>`:""}</tr></table></div>`}
+
+function bars(list,col){const mx=Math.max(1,...list.map(x=>x[1])),t=list.reduce((s,x)=>s+x[1],0);
+return list.map(([l,n])=>`<div class="bar"><div class="l" title="${l}">${l}</div><div class="tr"><i style="width:${n/mx*100}%;--col:${col}"></i></div><div class="v"><b>${n}</b> · ${(n/t*100).toFixed(0)}%</div></div>`).join("")||"<div class='msg'>No data.</div>"}
+const cnt=(a,f)=>{const m={};a.forEach(x=>{const k=f(x);m[k]=(m[k]||0)+1});return Object.entries(m).sort((x,y)=>y[1]-x[1])};
+const card=(i,t,s,b)=>`<div class="card"><h2>${i?`<i>${i}</i>`:""}${t}</h2><p class="sub">${s}</p>${b}</div>`;
+
+function render(){if(!loaded){$("out").innerHTML=card("","Loading…","Fetching live data from the sheet.","");return}
+const all=base(),dd=all.filter(x=>x.d);
+fill("fd",[...new Set(dd.map(x=>dk(x.d)))].sort().reverse(),dlab);fill("fw",[...new Set(dd.map(x=>wk(x.d)))].sort().reverse(),wlab);
+fill("fm",[...new Set(dd.map(x=>mk(x.d)))].sort().reverse(),mlab);fill("fy",[...new Set(dd.map(x=>String(x.d.getFullYear())))].sort().reverse());
+fill("fo",uniq(all.map(x=>x.o)));
+const a=filt(all),isV=x=>/visit.*sched|sched.*visit/i.test(x.u),V=a.filter(isV).length,n=new Date(),tw=wk(n),tm=mk(n);
+const stages=cnt(a,x=>x.s).map(x=>x[0]),weeks=[...new Set(a.filter(x=>x.d).map(x=>wk(x.d)))].sort(),months=[...new Set(a.filter(x=>x.d).map(x=>mk(x.d)))].sort();
+const own=cnt(a,x=>x.o),col=COL[tab],name=tab=="all"?"Final Report · Offline + Digital Leads":NAMES[tab];
+const K=(l,v,e,c)=>`<div class="kpi" style="--a:${c||col}"><span>${l}</span><b>${v}</b><em>${e||"&nbsp;"}</em></div>`;
+let h=`<div class="kpis">${K("Total leads",a.length,"in selected period")}${K("Active lead owners",own.length,"")}${K("This week",a.filter(x=>x.d&&wk(x.d)==tw).length,"leads registered","#0891b2")}${K("This month",a.filter(x=>x.d&&mk(x.d)==tm).length,"leads registered","#0891b2")}${K("Site visits scheduled",V,"substage: Visit Scheduled","#059669")}${K("Visit conversion",a.length?(V/a.length*100).toFixed(1)+"%":"0%","visits ÷ leads","#059669")}</div>`;
+if(own.length)h+=`<div class="ins"><b>Highlights:</b> ${own[0][0]} leads with ${own[0][1]} leads (${(own[0][1]/a.length*100).toFixed(0)}% of volume). Largest stage is “${cnt(a,x=>x.s)[0]?.[0]}” with ${cnt(a,x=>x.s)[0]?.[1]} leads.${V?` ${cnt(a.filter(isV),x=>x.o)[0][0]} has the most site visits scheduled (${cnt(a.filter(isV),x=>x.o)[0][1]}).`:""}</div>`;
+h+=`<div class="g2">${card("","Lead stage distribution","Pipeline position of all leads",bars(cnt(a,x=>x.s),col))}${card("","Lead owner leaderboard","Total leads handled",bars(own.slice(0,12),col))}</div>`;
+if(tab=="all")h+=card("","Source split","Offline vs Digital leads by lead owner",pivot(a,x=>x.o,x=>x.src=="btl"?"Offline Leads":"Digital Leads",["Offline Leads","Digital Leads"],null,"Lead owner"));
+h+=card(1,"Lead owner wise · Lead stages","Lead owners in rows, every lead stage as a column",pivot(a,x=>x.o,x=>x.s,stages,null,"Lead owner"));
+h+=card(2,"Lead owner wise · Lead substages","Lead owners in rows, every lead substage as a column (includes Visit Scheduled)",pivot(a,x=>x.o,x=>x.u||"Not Updated",cnt(a,x=>x.u||"Not Updated").map(x=>x[0]),null,"Lead owner"));
+h+=card(3,"Lead owner wise · Weekly leads","Leads registered per week (Mon – Sun)",pivot(a,x=>x.o,x=>x.d?wk(x.d):null,weeks,wlab,"Lead owner"));
+h+=card(4,"Lead owner wise · Monthly leads","Leads registered per calendar month",pivot(a,x=>x.o,x=>x.d?mk(x.d):null,months,mlab,"Lead owner"));
+h+=card(5,"Lead owner wise · Leads summary","This week, this month and till now (all-time view, date filters not applied)",periods(all,()=>true,false));
+h+=card(6,"Lead owner wise · Site visits scheduled","Lead substage “Visit Scheduled” – this week, this month and till now; visit rate = visits ÷ owner’s total leads",periods(all,isV,true));
+$("out").innerHTML=h}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));b.classList.add("on");tab=b.dataset.t;render()});
+["q","fd","fw","fm","fy","fo"].forEach(i=>$(i).onchange=render);
+render();load();
+</script></body></html>
